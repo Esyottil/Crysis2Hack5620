@@ -13,7 +13,7 @@
 1. Склонируйте репозиторий:
 
 ```bash
-git clone https://github.com/yourusername/Crysis2Hack5620.git
+git clone https://github.com/Esyottil/Crysis2Hack5620.git
 ```
 
 2. Откройте проект в Visual Studio и соберите его (выберите правильную конфигурацию x86/x64 в зависимости от версии игры).
