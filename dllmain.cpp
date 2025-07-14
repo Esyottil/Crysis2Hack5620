@@ -23,18 +23,29 @@ SystemUpdateFn originalSystemUpdate;
 void Feature()
 {
     SSystemGlobalEnvironment* gEnv = SSystemGlobalEnvironment::Singleton();
-    CGame* pGame = CGame::Singleton(); if (!pGame) return;
-
     if (gEnv)
     {
-        IEntitySystem* pEntitySystem = gEnv->GetIEntitySystem();
-        if (pEntitySystem)
+        CGame* pGame = CGame::Singleton();
+        if (pGame)
         {
-            IEntityIt* pEntityit = pEntitySystem->GetEntityIterator();
-            if (pEntityit)
+            IGameFramework* pGameFramework = pGame->GetIGameFramework();
+            if (pGameFramework)
             {
-                while (IEntity* pEntity = pEntityit->Next())
+                IEntitySystem* pEntitySystem = gEnv->GetIEntitySystem();
+                if (pEntitySystem)
                 {
+                    IEntityIt* pEntityit = pEntitySystem->GetEntityIterator();
+                    if (pEntityit)
+                    {
+                        while (IEntity* pEntity = pEntityit->Next())
+                        {
+                            IActor* pActor = pGameFramework->GetIActorSystem()->GetActor(pEntity->GetId());
+                            if (pActor)
+                            {
+                                printf("[Actor]: %p | Name: %s\n", pActor,pEntity->GetName());
+                            }
+                        }
+                    }
                 }
             }
         }
