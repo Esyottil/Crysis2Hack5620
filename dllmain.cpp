@@ -17,9 +17,6 @@ typedef bool(__thiscall* SystemUpdateFn)(ISystem*, int, int);
 // === Оригиналы ===
 SystemUpdateFn originalSystemUpdate;
 
-//GameRules + 428 / 4 - Tag
-
-
 void Feature()
 {
     SSystemGlobalEnvironment* gEnv = SSystemGlobalEnvironment::Singleton();
@@ -31,24 +28,59 @@ void Feature()
             IGameFramework* pGameFramework = pGame->GetIGameFramework();
             if (pGameFramework)
             {
-                IEntitySystem* pEntitySystem = gEnv->GetIEntitySystem();
-                if (pEntitySystem)
+                IGameRulesSystem* pGameRulesSystem = pGameFramework->GetIGameRulesSystem(); if (!pGameRulesSystem) return;
+                IGameRules* pGameRules = pGameRulesSystem->GetCurrentGameRules(); if (!pGameRules);
+
+                IActor* m_pActor = pGameFramework->GetClientActor();
+                if (m_pActor)
                 {
-                    IEntityIt* pEntityit = pEntitySystem->GetEntityIterator();
-                    if (pEntityit)
+                    IEntitySystem* pEntitySystem = gEnv->GetIEntitySystem();
+                    if (pEntitySystem)
                     {
-                        while (IEntity* pEntity = pEntityit->Next())
+                        IEntityIt* pEntityit = pEntitySystem->GetEntityIterator();
+                        if (pEntityit)
                         {
-                            IActor* pActor = pGameFramework->GetIActorSystem()->GetActor(pEntity->GetId());
-                            if (pActor)
+                            while (IEntity* pEntity = pEntityit->Next())
                             {
-                                printf("[Actor]: %p | Name: %s\n", pActor,pEntity->GetName());
+                                IActor* pActor = pGameFramework->GetIActorSystem()->GetActor(pEntity->GetId());
+                                if (pActor)
+                                {
+                                    printf("[Actor]: %p | Name: %s | Healt: %.2f\n", pActor, pEntity->GetName(), pActor->GetHealth());
+                                }
+                                else
+                                {
+                                    continue;
+                                }
                             }
                         }
+                        else
+                        {
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        return;
                     }
                 }
+                else
+                {
+                    return;
+                }
+            }
+            else
+            {
+                return;
             }
         }
+        else
+        {
+            return;
+        }
+    }
+    else
+    {
+        return;
     }
 }
 
