@@ -24,7 +24,7 @@ git clone https://github.com/Esyottil/Crysis2Hack5620.git
 
 MIT License
 
-Copyright (c) 2025 [Ваше имя]
+Copyright (c) 2025 Esyottil
 
 Детали см. в файле [LICENSE](LICENSE).
 
