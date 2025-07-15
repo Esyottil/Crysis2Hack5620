@@ -13,7 +13,8 @@
 - ✅ **Валхак на имя** — отображение местоположения всех игроков/NPC на карте или в игре без необходимости прямой видимости.
 - ✅ **Глоу-ободка вокруг персонажей** — выделяет других персонажей цветным контуром, но **без просвечивание сквозь стены**.
 
-([preview](https://sun9-48.userapi.com/s/v1/if2/hPF3dfftR1dIy-3pJWcqkLQO7EvFi-3_h2WgmcBOv1dwmbM2XA8ejHhxwWyIfgarEdkaCT2LSZYhFP8ldwcedc74.jpg?quality=95&as=32x18,48x27,72x40,108x61,160x90,240x135,360x202,480x270,540x304,640x360,720x405,1080x607,1280x720&from=bu&cs=1280x0))
+<img width="1280" height="720" alt="image" src="https://github.com/user-attachments/assets/e837e0d3-7d47-4a1b-8e8d-1040057b633b" />
+
 ## Установка и использование
 
 1. Склонируйте репозиторий:
