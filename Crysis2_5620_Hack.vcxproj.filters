@@ -17,10 +17,16 @@
     <ClCompile Include="MinHook\hde64.cpp">
       <Filter>MinHook</Filter>
     </ClCompile>
+    <ClCompile Include="MayloMenu\cDraw.cpp">
+      <Filter>Menu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="MinHook">
       <UniqueIdentifier>{7683a9e6-780a-488b-875f-9a16474672ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Menu">
+      <UniqueIdentifier>{82ba37a6-34f0-41b4-9fad-5255cde9a7d9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -50,5 +56,8 @@
     </ClInclude>
     <ClInclude Include="CryClass.h" />
     <ClInclude Include="Enums.h" />
+    <ClInclude Include="MayloMenu\cDraw.h">
+      <Filter>Menu</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

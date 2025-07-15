@@ -33,17 +33,41 @@ PresentFn oPresent = nullptr;
 IDirect3DDevice9* g_pDevice = nullptr;
 ID3DXFont* g_pFont = nullptr;
 
+void DrawTextF(int x, int y, DWORD color, const char* text, DWORD style)
+{
+    RECT rect;
+    SetRect(&rect, x, y, x + 200, y + 20);
+    if (g_pFont)
+        g_pFont->DrawTextA(nullptr, text, -1, &rect, style, color);
+}
+
 HRESULT __stdcall hkEndScene(IDirect3DDevice9* device)
 {
     if (!g_pFont)
     {
-        D3DXCreateFontA(device, 20, 0, FW_NORMAL, 1, FALSE, DEFAULT_CHARSET,OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE,"Arial", &g_pFont);
+        D3DXCreateFontA(device, 20, 0, FW_NORMAL, 1, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Arial", &g_pFont);
     }
+
+    SSystemGlobalEnvironment* gEnv = SSystemGlobalEnvironment::Singleton();
+    if (!gEnv) return oEndScene(device);
+
+    IRenderer* pRenderer = gEnv->GetIRenderer();
+    if (!pRenderer) return oEndScene(device);
+
+    float ScreenCenterX = (pRenderer->GetWidth() / 2.0f);
+    float ScreenCenterY = (pRenderer->GetHeight() / 2.0f);
+
+    const int startX = 10;
+    const int startY = 10;
+    const int lineHeight = 30;
+
     if (g_pFont)
     {
-
-        RECT rect = { 10, 10, 500, 50 };
-        g_pFont->DrawTextA(nullptr, "Crysis2_5620_Hack (EndSceneHook)", -1, &rect, DT_LEFT, D3DCOLOR_XRGB(255, 255, 0));
+        char buffer[256];
+        snprintf(buffer, sizeof(buffer), "Crysis2_5620_Hack");
+        DrawTextF(startX, startY + 0 * lineHeight, D3DCOLOR_XRGB(255, 255, 255), buffer, DT_LEFT);
+        
+        DrawTextF(ScreenCenterX, ScreenCenterY, DarkRed, "Center", DT_LEFT);
     }
 
     return oEndScene(device);
