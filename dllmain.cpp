@@ -22,17 +22,17 @@ void Feature()
     SSystemGlobalEnvironment* gEnv = SSystemGlobalEnvironment::Singleton();
     if (gEnv)
     {
-        IRenderer* pRenderer = gEnv->GetIRenderer(); if (!pRenderer) return;
-
         CGame* pGame = CGame::Singleton();
         if (pGame)
         {
             IGameFramework* pGameFramework = pGame->GetIGameFramework();
             if (pGameFramework)
             {
+                IRenderer* pRenderer = gEnv->GetIRenderer(); if (!pRenderer) return;
                 float ScreenCenterX = (pRenderer->GetWidth() / 2.0f);
                 float ScreenCenterY = (pRenderer->GetHeight() / 2.0f);
                 float ScreenBottomY = (pRenderer->GetHeight());
+
 
                 IGameRulesSystem* pGameRulesSystem = pGameFramework->GetIGameRulesSystem(); if (!pGameRulesSystem) return;
                 IGameRules* pGameRules = pGameRulesSystem->GetCurrentGameRules(); if (!pGameRules);
@@ -103,6 +103,7 @@ bool __fastcall SystemUpdateHook(ISystem* mSystem, void* unk, int updateFlags, i
     return originalSystemUpdate(mSystem, updateFlags, nPauseMode);
 }
 
+
 bool InitializeHook()
 {
     HMODULE hSystemModule = GetModuleHandleA("CrySystem.dll");
@@ -135,6 +136,7 @@ bool InitializeHook()
     {
         return false;
     }
+
 
     std::cout << "Successfully hooked CSystem::Update at 0x" << std::hex << funcAddr << std::dec << "\n";
     return true;
