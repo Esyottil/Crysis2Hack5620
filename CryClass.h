@@ -1,4 +1,6 @@
 #include "Enums.h"
+typedef unsigned int				uint32;
+
 uintptr_t GameModuleAddress = 0;
 class SSystemGlobalEnvironment;
 class ISystem;
@@ -155,8 +157,8 @@ public:
     virtual void Function2(); //
     virtual void Function3(); //
     virtual void Function4(); //
-    virtual void Function5(); //
-    virtual void Function6(); //
+    virtual void SetFlags(uint32 flags); //
+    virtual uint32 GetFlags(); //
     virtual void Function7(); //
     virtual void Function8(); //
     virtual void Function9(); //

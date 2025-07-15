@@ -5,6 +5,13 @@
 #include <cstdint>
 #include <iostream>
 #include "CryClass.h"
+#include <d3d9.h>
+#include <d3d9types.h>
+#include <d3dx9.h>
+#include <stdio.h>
+
+#pragma comment(lib, "d3d9.lib")
+#pragma comment(lib, "d3dx9.lib")
 
 uintptr_t SystemModuleAddress = 0;
 
@@ -13,9 +20,45 @@ uintptr_t CSystemUpdate_Offset = 0x4B290;
 
 // === Функции ===
 typedef bool(__thiscall* SystemUpdateFn)(ISystem*, int, int);
+typedef HRESULT(__stdcall* EndSceneFn)(IDirect3DDevice9*);
+typedef HRESULT(__stdcall* ResetFn)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
+typedef HRESULT(__stdcall* PresentFn)(IDirect3DDevice9*, const RECT*, const RECT*, HWND, const RGNDATA*);
 
 // === Оригиналы ===
 SystemUpdateFn originalSystemUpdate;
+EndSceneFn oEndScene = nullptr;
+ResetFn oReset = nullptr;
+PresentFn oPresent = nullptr;
+
+IDirect3DDevice9* g_pDevice = nullptr;
+ID3DXFont* g_pFont = nullptr;
+
+HRESULT __stdcall hkEndScene(IDirect3DDevice9* device)
+{
+    if (!g_pFont)
+    {
+        D3DXCreateFontA(device, 20, 0, FW_NORMAL, 1, FALSE, DEFAULT_CHARSET,OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE,"Arial", &g_pFont);
+    }
+    if (g_pFont)
+    {
+
+        RECT rect = { 10, 10, 500, 50 };
+        g_pFont->DrawTextA(nullptr, "Crysis2_5620_Hack (EndSceneHook)", -1, &rect, DT_LEFT, D3DCOLOR_XRGB(255, 255, 0));
+    }
+
+    return oEndScene(device);
+}
+
+HRESULT __stdcall hkReset(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* pPresentationParameters)
+{
+    if (g_pFont)
+    {
+        g_pFont->Release();
+        g_pFont = nullptr;
+    }
+
+    return oReset(device, pPresentationParameters);
+}
 
 void Feature()
 {
@@ -56,6 +99,7 @@ void Feature()
                                 {
                                     //printf("[Actor]: %p | Name: %s | Healt: %.2f\n", pActor, pEntity->GetName(), pActor->GetHealth());
                                     pEntityProxy->SetVisionParams(255, 255, 0, 0);
+                                    pEntity->SetFlags(ENTITY_FLAG_ON_RADAR);
                                 }
                                 else
                                 {
@@ -103,6 +147,64 @@ bool __fastcall SystemUpdateHook(ISystem* mSystem, void* unk, int updateFlags, i
     return originalSystemUpdate(mSystem, updateFlags, nPauseMode);
 }
 
+HRESULT __stdcall hkPresent(IDirect3DDevice9* device, const RECT* src, const RECT* dest, HWND window, const RGNDATA* dirty_region)
+{
+    if (!g_pDevice)
+    {
+        g_pDevice = device;
+
+        // Получаем адреса EndScene и Reset из vtable
+        void** vTable = *reinterpret_cast<void***>(device);
+
+        // Инициализируем MinHook
+        MH_Initialize();
+
+        // ==== Hook EndScene (обычно vtable[42]) ====
+        void* pEndScene = vTable[42];
+        MH_CreateHook(pEndScene, hkEndScene, reinterpret_cast<void**>(&oEndScene));
+        MH_EnableHook(pEndScene);
+
+        // ==== Hook Reset (обычно vtable[16]) ====
+        void* pReset = vTable[16];
+        MH_CreateHook(pReset, hkReset, reinterpret_cast<void**>(&oReset));
+        MH_EnableHook(pReset);
+
+        printf("[Hook] EndScene and Reset hooked successfully.\n");
+    }
+
+    return oPresent(device, src, dest, window, dirty_region);
+}
+
+void HookPresent()
+{
+    printf("[Hook] Starting hook Present...\n");
+
+    IDirect3D9* d3d = Direct3DCreate9(D3D_SDK_VERSION);
+    if (!d3d)
+        return;
+
+    D3DPRESENT_PARAMETERS pp = {};
+    ZeroMemory(&pp, sizeof(pp));
+    pp.Windowed = TRUE;
+    pp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+
+    IDirect3DDevice9* device = nullptr;
+    if (FAILED(d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetDesktopWindow(),
+        D3DCREATE_SOFTWARE_VERTEXPROCESSING, &pp, &device)))
+    {
+        d3d->Release();
+        return;
+    }
+
+    void** vTable = *reinterpret_cast<void***>(device);
+    void* pPresent = vTable[17]; // Present обычно находится на индексе 17
+
+    MH_CreateHook(pPresent, hkPresent, reinterpret_cast<void**>(&oPresent));
+    MH_EnableHook(pPresent);
+
+    device->Release();
+    d3d->Release();
+}
 
 bool InitializeHook()
 {
@@ -127,6 +229,8 @@ bool InitializeHook()
         return false;
     }
 
+    HookPresent();
+
     if (MH_CreateHook((void*)funcAddr, SystemUpdateHook, reinterpret_cast<void**>(&originalSystemUpdate)) != MH_OK)
     {
         return false;
@@ -137,10 +241,11 @@ bool InitializeHook()
         return false;
     }
 
-
     std::cout << "Successfully hooked CSystem::Update at 0x" << std::hex << funcAddr << std::dec << "\n";
     return true;
 }
+
+
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
