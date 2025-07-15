@@ -10,6 +10,7 @@
 #include <d3dx9.h>
 #include <stdio.h>
 
+
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dx9.lib")
 
@@ -41,6 +42,28 @@ void DrawTextF(int x, int y, DWORD color, const char* text, DWORD style)
         g_pFont->DrawTextA(nullptr, text, -1, &rect, style, color);
 }
 
+bool WorldToScreen(Vec3 vEntPos, Vec3& vOut)
+{
+    SSystemGlobalEnvironment* m_SSystemGlobalEnvironment = SSystemGlobalEnvironment::Singleton();
+    IRenderer* Renderer = m_SSystemGlobalEnvironment->GetIRenderer();
+
+    Renderer->ProjectToScreen(vEntPos.x, vEntPos.y, vEntPos.z, &vOut.x, &vOut.y, &vOut.z);
+
+    vOut.x *= (Renderer->GetWidth() / 100.0f);
+    vOut.y *= (Renderer->GetHeight() / 100.0f);
+    vOut.z *= 1.0f;
+
+    return ((vOut.z < 1.0f) && (vOut.x > 0) && (vOut.x < (float)Renderer->GetWidth()) && (vOut.y > 0) && (vOut.y < (float)Renderer->GetHeight()));
+}
+
+Vec3 GetPlayerPos(IEntity* pEntit)
+{
+    Vec3 vOffset = Vec3();
+    Matrix34 pWorld = pEntit->GetWorldTM();
+    vOffset = pWorld.GetTranslation();
+    return vOffset;
+}
+
 HRESULT __stdcall hkEndScene(IDirect3DDevice9* device)
 {
     if (!g_pFont)
@@ -48,21 +71,40 @@ HRESULT __stdcall hkEndScene(IDirect3DDevice9* device)
         D3DXCreateFontA(device, 20, 0, FW_NORMAL, 1, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Arial", &g_pFont);
     }
 
-    SSystemGlobalEnvironment* gEnv = SSystemGlobalEnvironment::Singleton();
-    if (!gEnv) return oEndScene(device);
-
-    IRenderer* pRenderer = gEnv->GetIRenderer();
-    if (!pRenderer) return oEndScene(device);
-
-    float ScreenCenterX = (pRenderer->GetWidth() / 2.0f);
-    float ScreenCenterY = (pRenderer->GetHeight() / 2.0f);
-
     const int startX = 10;
     const int startY = 10;
     const int lineHeight = 30;
 
     if (g_pFont)
     {
+        SSystemGlobalEnvironment* gEnv = SSystemGlobalEnvironment::Singleton();
+        if (!gEnv) return oEndScene(device);
+        CGame* pGame = CGame::Singleton(); if(!pGame) return oEndScene(device);
+        IGameFramework* pGameFramework = pGame->GetIGameFramework(); if (!pGameFramework) return oEndScene(device);
+
+        IRenderer* pRenderer = gEnv->GetIRenderer();
+        if (!pRenderer) return oEndScene(device);
+
+        float ScreenCenterX = (pRenderer->GetWidth() / 2.0f);
+        float ScreenCenterY = (pRenderer->GetHeight() / 2.0f);
+
+        IEntitySystem* pEntitySystem = gEnv->GetIEntitySystem(); if(!pEntitySystem) return oEndScene(device);
+        IEntityIt* pEntityIt = pEntitySystem->GetEntityIterator(); if(!pEntityIt) return oEndScene(device);
+        while (IEntity* pEntity = pEntityIt->Next())
+        {
+            IActor* pActor = pGameFramework->GetIActorSystem()->GetActor(pEntity->GetId());
+            if (pActor)
+            {
+                Vec3 PlayerPos = GetPlayerPos(pEntity);
+                Vec3 PlayerPosOut;
+                const char* playername = pEntity->GetName();
+                if (WorldToScreen(PlayerPos, PlayerPosOut))
+                {
+                    DrawTextF(PlayerPosOut.x, PlayerPosOut.y, DarkYellow,playername, DT_CENTER);
+                }
+            }
+        }
+
         char buffer[256];
         snprintf(buffer, sizeof(buffer), "Crysis2_5620_Hack");
         DrawTextF(startX, startY + 0 * lineHeight, D3DCOLOR_XRGB(255, 255, 255), buffer, DT_LEFT);

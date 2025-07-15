@@ -1,5 +1,5 @@
 #include "Enums.h"
-typedef unsigned int				uint32;
+#include "vector3.hpp"
 
 uintptr_t GameModuleAddress = 0;
 class SSystemGlobalEnvironment;
@@ -138,6 +138,22 @@ public:
     virtual void Function59(); //
     virtual int GetWidth(); // 
     virtual int GetHeight(); // 
+    virtual void Function62(); //
+    virtual void Function63(); //
+    virtual void Function64(); //
+    virtual void Function65(); //
+    virtual void Function66(); //
+    virtual void Function67(); //
+    virtual void Function68(); //
+    virtual void Function69(); //
+    virtual void Function70(); //
+    virtual void Function71(); //
+    virtual void Function72(); //
+    virtual void Function73(); //
+    virtual void Function74(); //
+    virtual void Function75(); //
+    virtual void ProjectToScreen(float ptx, float pty, float ptz, float* sx, float* sy, float* sz) = 0;
+
 };
 
 class IEntityIt {
@@ -157,8 +173,8 @@ public:
     virtual void Function2(); //
     virtual void Function3(); //
     virtual void Function4(); //
-    virtual void SetFlags(uint32 flags); //
-    virtual uint32 GetFlags(); //
+    virtual void SetFlags(unsigned int flags); //
+    virtual unsigned int GetFlags(); //
     virtual void Function7(); //
     virtual void Function8(); //
     virtual void Function9(); //
@@ -175,7 +191,7 @@ public:
     virtual void Function20(); //
     virtual void Function21(); // 
     virtual void Function22(); //
-    virtual void Function23(); //
+    virtual const Matrix34& GetWorldTM() const = 0; //
     virtual void Function24(); //
     virtual void Function25(); //
     virtual void Function26(); //
