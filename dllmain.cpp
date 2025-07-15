@@ -22,12 +22,18 @@ void Feature()
     SSystemGlobalEnvironment* gEnv = SSystemGlobalEnvironment::Singleton();
     if (gEnv)
     {
+        IRenderer* pRenderer = gEnv->GetIRenderer(); if (!pRenderer) return;
+
         CGame* pGame = CGame::Singleton();
         if (pGame)
         {
             IGameFramework* pGameFramework = pGame->GetIGameFramework();
             if (pGameFramework)
             {
+                float ScreenCenterX = (pRenderer->GetWidth() / 2.0f);
+                float ScreenCenterY = (pRenderer->GetHeight() / 2.0f);
+                float ScreenBottomY = (pRenderer->GetHeight());
+
                 IGameRulesSystem* pGameRulesSystem = pGameFramework->GetIGameRulesSystem(); if (!pGameRulesSystem) return;
                 IGameRules* pGameRules = pGameRulesSystem->GetCurrentGameRules(); if (!pGameRules);
 
@@ -42,10 +48,14 @@ void Feature()
                         {
                             while (IEntity* pEntity = pEntityit->Next())
                             {
+                                IEntityProxy* pEntityProxy = pEntity->GetProxy(ENTITY_PROXY_RENDER);
+                                if (!pEntityProxy) continue;
+
                                 IActor* pActor = pGameFramework->GetIActorSystem()->GetActor(pEntity->GetId());
                                 if (pActor)
                                 {
-                                    printf("[Actor]: %p | Name: %s | Healt: %.2f\n", pActor, pEntity->GetName(), pActor->GetHealth());
+                                    //printf("[Actor]: %p | Name: %s | Healt: %.2f\n", pActor, pEntity->GetName(), pActor->GetHealth());
+                                    pEntityProxy->SetVisionParams(255, 255, 0, 0);
                                 }
                                 else
                                 {
