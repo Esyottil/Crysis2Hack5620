@@ -9,7 +9,7 @@
 #include <d3d9types.h>
 #include <d3dx9.h>
 #include <stdio.h>
-
+#include <vector>
 
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dx9.lib")
@@ -33,6 +33,10 @@ PresentFn oPresent = nullptr;
 
 IDirect3DDevice9* g_pDevice = nullptr;
 ID3DXFont* g_pFont = nullptr;
+LPD3DXLINE pLine = nullptr;
+
+static float silentFOV = 70;
+static bool VectorAimbot = false;
 
 void DrawTextF(int x, int y, DWORD color, const char* text, DWORD style)
 {
@@ -40,6 +44,45 @@ void DrawTextF(int x, int y, DWORD color, const char* text, DWORD style)
     SetRect(&rect, x, y, x + 200, y + 20);
     if (g_pFont)
         g_pFont->DrawTextA(nullptr, text, -1, &rect, style, color);
+}
+
+void DrawLineF(float x, float y, float x2, float y2, float width,DWORD color)
+{
+    D3DXVECTOR2 vLine[2];
+    pLine->SetWidth(width);
+    pLine->SetAntialias(false);
+    pLine->SetGLLines(true);
+    vLine[0].x = x;
+    vLine[0].y = y;
+    vLine[1].x = x2;
+    vLine[1].y = y2;
+    pLine->Begin();
+    pLine->Draw(vLine, 2, color);
+    pLine->End();
+}
+
+void DrawCircleF(float x, float y, float radius, int numSides, D3DCOLOR color)
+{
+    if (!pLine) return;
+
+    std::vector<D3DXVECTOR2> vertices;
+
+    float angle = 0.0f;
+    float step = D3DX_PI * 2.0f / numSides;
+
+    for (int i = 0; i <= numSides; i++)
+    {
+        float x1 = x + (cos(angle) * radius);
+        float y1 = y + (sin(angle) * radius);
+        vertices.push_back(D3DXVECTOR2(x1, y1));
+        angle += step;
+    }
+
+    pLine->SetWidth(2.0f);
+    pLine->SetAntialias(TRUE);
+    pLine->Begin();
+    pLine->Draw(&vertices[0], vertices.size(), color);
+    pLine->End();
 }
 
 bool WorldToScreen(Vec3 vEntPos, Vec3& vOut)
@@ -56,6 +99,35 @@ bool WorldToScreen(Vec3 vEntPos, Vec3& vOut)
     return ((vOut.z < 1.0f) && (vOut.x > 0) && (vOut.x < (float)Renderer->GetWidth()) && (vOut.y > 0) && (vOut.y < (float)Renderer->GetHeight()));
 }
 
+void Box2DFixed(IEntity* m_IEntity, DWORD Color)
+{
+    AABB bBox;
+    m_IEntity->GetWorldBounds(bBox);
+
+    Vec3 pos = (bBox.min + bBox.max) * 0.5f; // Центр объекта
+
+    Vec3 screenPos;
+    if (!WorldToScreen(pos, screenPos))
+        return;
+
+    const float width = 60.0f;   // Фиксированная ширина
+    const float height = 100.0f; // Фиксированная высота
+
+    float left = screenPos.x - width / 2;
+    float top = screenPos.y - height / 2;
+    float right = screenPos.x + width / 2;
+    float bottom = screenPos.y + height / 2;
+
+    // Верхняя линия
+    DrawLineF(left, top, right, top, 1, Color);
+    // Нижняя линия
+    DrawLineF(left, bottom, right, bottom, 1, Color);
+    // Левая линия
+    DrawLineF(left, top, left, bottom, 1, Color);
+    // Правая линия
+    DrawLineF(right, top, right, bottom, 1, Color);
+}
+
 Vec3 GetPlayerPos(IEntity* pEntit)
 {
     Vec3 vOffset = Vec3();
@@ -64,32 +136,119 @@ Vec3 GetPlayerPos(IEntity* pEntit)
     return vOffset;
 }
 
+Vec3 GetBonePositionByID(IEntity* pEnt, int BoneID)
+{
+    Vec3 Nenaxod = {};
+    if (!pEnt)
+        return Nenaxod;
+    ICharacterInstance* pCharacterInstance = pEnt->GetCharacter(0);
+    if (!pCharacterInstance)
+        return Nenaxod;
+    ISkeletonPose* pSkeletonPose = pCharacterInstance->GetISkeletonPose();
+    if (!pSkeletonPose)
+        return Nenaxod;
+    if (BoneID == -1)
+        return Nenaxod;
+
+    Matrix34 World = pEnt->GetWorldTM();
+
+    Matrix34 SkeletonAbs = Matrix34(pSkeletonPose->GetAbsJointByID(BoneID));
+
+    Matrix34 matWorld = World;
+    matWorld.m03 = (World.m00 * SkeletonAbs.m03) + (World.m01 * SkeletonAbs.m13) + (World.m02 * SkeletonAbs.m23) + World.m03;
+    matWorld.m13 = (World.m10 * SkeletonAbs.m03) + (World.m11 * SkeletonAbs.m13) + (World.m12 * SkeletonAbs.m23) + World.m13;
+    matWorld.m23 = (World.m20 * SkeletonAbs.m03) + (World.m21 * SkeletonAbs.m13) + (World.m22 * SkeletonAbs.m23) + World.m23;
+
+    return matWorld.GetTranslation();
+}
+
+extern "C" void Aim(IActor* MyActor, Vec3 EnemyBone)
+{
+    Vec3 vDiffer;
+    vDiffer = EnemyBone - GetBonePositionByID(MyActor->GetEntity(), 36);
+    Quat FinalHeadPos = Quat::CreateRotationVDir(vDiffer.normalize());
+    MyActor->SetViewRotation(FinalHeadPos);
+}
+
+float calculateFov(Vec3 to) {
+
+    Vec3 out;
+
+    if (!WorldToScreen(to, out))
+        return 9999.9f;
+
+    float cx = static_cast<float>(SSystemGlobalEnvironment::Singleton()->GetIRenderer()->GetWidth() / 2);
+    float cy = static_cast<float>(SSystemGlobalEnvironment::Singleton()->GetIRenderer()->GetHeight() / 2);
+
+    float px = out.x > cx ? out.x - cx : cx - out.x;
+    float py = out.y > cy ? out.y - cy : cy - out.y;
+
+    return static_cast<float>(sqrt(px * px + py * py));
+}
+
+bool GetDeadPlayer(IActor* Player)
+{
+    if (Player->IsDead()) return true;
+    else return false;
+}
+
+bool M1Team(IActor* MePlayer, IActor* LocPlayer)
+{
+    int mTeam = CGame::Singleton()->GetIGameFramework()->GetIGameRulesSystem()->GetCurrentGameRules()->GetTeam(MePlayer->GetEntity()->GetId());
+    int pTeam = CGame::Singleton()->GetIGameFramework()->GetIGameRulesSystem()->GetCurrentGameRules()->GetTeam(MePlayer->GetEntity()->GetId());
+
+    if ((mTeam != pTeam || pTeam == 0))
+        return true;
+    else
+        return false;
+}
+
+int CheckVisible(IPhysicalWorld* pPhysicalWorld, Vec3 at, Vec3 to)
+{
+    ray_hit tmphit;
+  
+    return !pPhysicalWorld->RayWorldIntersection(to, at - to, 0x100 | 0x1, 0xA | 0x400, &tmphit, 1);
+}
+
 HRESULT __stdcall hkEndScene(IDirect3DDevice9* device)
 {
     if (!g_pFont)
     {
         D3DXCreateFontA(device, 20, 0, FW_NORMAL, 1, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Arial", &g_pFont);
     }
+    if (!pLine)
+    {
+        D3DXCreateLine(device, &pLine);
+    }
 
     const int startX = 10;
     const int startY = 10;
     const int lineHeight = 30;
 
-    if (g_pFont)
+    if (GetAsyncKeyState(VK_F1) & 1)
+        VectorAimbot = !VectorAimbot;
+
+    if (g_pFont && pLine)
     {
-        SSystemGlobalEnvironment* gEnv = SSystemGlobalEnvironment::Singleton();
-        if (!gEnv) return oEndScene(device);
+        char buffer[256];
+        snprintf(buffer, sizeof(buffer), "Crysis2_5620_Hack");
+        DrawTextF(startX, startY + 0 * lineHeight, D3DCOLOR_XRGB(255, 255, 255), buffer, DT_LEFT);
+
+        snprintf(buffer, sizeof(buffer), "[F1] AimBot: %s", VectorAimbot ? "ON" : "OFF");
+        DrawTextF(startX, startY + 1 * lineHeight, D3DCOLOR_XRGB(255, 255, 255), buffer, DT_LEFT);
+
+        SSystemGlobalEnvironment* gEnv = SSystemGlobalEnvironment::Singleton(); if (!gEnv) return oEndScene(device);
         CGame* pGame = CGame::Singleton(); if(!pGame) return oEndScene(device);
         IGameFramework* pGameFramework = pGame->GetIGameFramework(); if (!pGameFramework) return oEndScene(device);
-
-        IRenderer* pRenderer = gEnv->GetIRenderer();
-        if (!pRenderer) return oEndScene(device);
+        IRenderer* pRenderer = gEnv->GetIRenderer();if (!pRenderer) return oEndScene(device);
+        IEntitySystem* pEntitySystem = gEnv->GetIEntitySystem(); if (!pEntitySystem) return oEndScene(device);
+        IPhysicalWorld* pPhysicalWorld = gEnv->GetIPhysicalWorld(); if (!pPhysicalWorld) return oEndScene(device);
+        IEntityIt* pEntityIt = pEntitySystem->GetEntityIterator(); if (!pEntityIt) return oEndScene(device);
+        IActor* mActor = pGameFramework->GetClientActor(); if(!mActor) return oEndScene(device);
 
         float ScreenCenterX = (pRenderer->GetWidth() / 2.0f);
         float ScreenCenterY = (pRenderer->GetHeight() / 2.0f);
 
-        IEntitySystem* pEntitySystem = gEnv->GetIEntitySystem(); if(!pEntitySystem) return oEndScene(device);
-        IEntityIt* pEntityIt = pEntitySystem->GetEntityIterator(); if(!pEntityIt) return oEndScene(device);
         while (IEntity* pEntity = pEntityIt->Next())
         {
             IActor* pActor = pGameFramework->GetIActorSystem()->GetActor(pEntity->GetId());
@@ -97,19 +256,37 @@ HRESULT __stdcall hkEndScene(IDirect3DDevice9* device)
             {
                 Vec3 PlayerPos = GetPlayerPos(pEntity);
                 Vec3 PlayerPosOut;
-                const char* playername = pEntity->GetName();
-                if (WorldToScreen(PlayerPos, PlayerPosOut))
+                Vec3 BonePos = GetBonePositionByID(pEntity, EBonesID::BONE_HEAD);
+                Vec3 BonePosOut;
+                Vec3 LocalPlayerBonePos = GetBonePositionByID(mActor->GetEntity(), EBonesID::BONE_HEAD);
+                const char* playername = pActor->GetEntity()->GetName();
+                DrawCircleF(ScreenCenterX, ScreenCenterY, silentFOV, 100, VectorAimbot ? D3DCOLOR_ARGB(255,255,0,0) : D3DCOLOR_ARGB(255, 255, 255, 255));
+                if (calculateFov(BonePos) <= silentFOV)
                 {
-                    DrawTextF(PlayerPosOut.x, PlayerPosOut.y, DarkYellow,playername, DT_CENTER);
+                    if (!GetDeadPlayer(pActor)) // Only MP: !M1Team(mActor,pActor)
+                    {
+                        if (CheckVisible(pPhysicalWorld, BonePos, LocalPlayerBonePos))
+                        {
+                            if (VectorAimbot)
+                            {
+                                Aim(mActor, BonePos);
+                            }
+                        }
+                    }
+                }
+
+                if (WorldToScreen(PlayerPos, PlayerPosOut) && WorldToScreen(BonePos, BonePosOut))
+                {
+                    if (!GetDeadPlayer(pActor)) // Only MP: !M1Team(mActor,pActor)
+                    {
+                        DrawTextF(PlayerPosOut.x, PlayerPosOut.y, DarkYellow, playername, DT_CENTER);
+                        DrawLineF(ScreenCenterX, ScreenCenterY, PlayerPosOut.x, PlayerPosOut.y, 2, DarkYellow);
+                        Box2DFixed(pEntity, CheckVisible(pPhysicalWorld, BonePos, LocalPlayerBonePos) ? DarkRed : DarkYellow);
+                        DrawCircleF(BonePosOut.x, BonePosOut.y, 15, 32, DARKGREY);
+                    }
                 }
             }
         }
-
-        char buffer[256];
-        snprintf(buffer, sizeof(buffer), "Crysis2_5620_Hack");
-        DrawTextF(startX, startY + 0 * lineHeight, D3DCOLOR_XRGB(255, 255, 255), buffer, DT_LEFT);
-        
-        DrawTextF(ScreenCenterX, ScreenCenterY, DarkRed, "Center", DT_LEFT);
     }
 
     return oEndScene(device);
@@ -121,6 +298,11 @@ HRESULT __stdcall hkReset(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* pPres
     {
         g_pFont->Release();
         g_pFont = nullptr;
+    }
+    if (pLine)
+    {
+        pLine->Release();
+        pLine = nullptr;
     }
 
     return oReset(device, pPresentationParameters);
@@ -307,7 +489,7 @@ bool InitializeHook()
         return false;
     }
 
-    std::cout << "Successfully hooked CSystem::Update at 0x" << std::hex << funcAddr << std::dec << "\n";
+    std::cout << "[Hook] Successfully hooked CSystem::Update at 0x" << std::hex << funcAddr << std::dec << "\n";
     return true;
 }
 
@@ -321,7 +503,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         SetConsoleOutputCP(CP_UTF8);
         FILE* f;
         freopen_s(&f, "CONOUT$", "w", stdout);
-        printf("DLL loaded.\n");
+        printf("[DllMain] Sucessfull Injected!\n");
 
         CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)InitializeHook, nullptr, 0, nullptr);
     }
