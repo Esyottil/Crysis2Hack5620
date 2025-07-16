@@ -199,20 +199,6 @@ struct ray_hit_cached {	// used in conjunction with rwi_reuse_last_hit
     int iNode;
 };
 
-struct SCollisionClass
-{
-    unsigned int type;     //!< Collision_class flags to identify the entity.
-    unsigned int ignore;   //!< Another entity will be ignored if *any* of these bits are set in its type.
-
-    SCollisionClass() {}
-
-    SCollisionClass(unsigned int t, unsigned int i)
-    {
-        type = t;
-        ignore = i;
-    }
-};
-
 struct SRWIParams
 {
 
