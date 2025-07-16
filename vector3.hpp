@@ -13,6 +13,8 @@ typedef unsigned __int64	uint64;
 typedef unsigned int uint49;
 typedef unsigned int EntityId;
 typedef float  f32;
+typedef signed short        int16;
+
 const static float size_text = 17.f;
 
 float clamp(float X, float Min, float Max)
@@ -955,88 +957,3 @@ template <typename F> struct Vec2_tpl {
 };
 
 typedef Vec2_tpl<float>								Vec2;
-
-struct SWorldToScreen
-{
-public:
-	float toX;
-	float toY;
-	float toZ;
-	float* outX;
-	float* outY;
-	float* outZ;
-};
-
-class SSystemGlobalEnvironment;
-class IGameFramework;
-class IGameRules;
-
-class ISystem;
-class CCamera;
-
-class ICVar;
-
-class I3DEngine;
-
-class IGame;
-
-class ITimer;
-
-class IItemSystem;
-class CWeaponExt;
-class IWeaponParameters;
-class IStatsArray;
-
-class IPhysicalWorld;
-
-class IActor;
-class IActorSystem;
-class IMovementController;
-
-class IPhysicalEntity;
-
-class IEntity;
-class IEntityIt;
-class IEntityProxy;
-class IEntitySystem;
-class ICharacterInstance;
-class ISkeletonPose;
-
-class IItem;
-class IWeapon;
-class IWeaponSpecific;
-class IWeaponParamsTwo;
-class IItemBox;
-
-class IGameObject;
-class IWorldQuery;
-
-class CFeedbackSystem;
-class CBombFeedback;
-class CCommunicationSystem;
-
-
-struct IGameFrameworkListener;
-struct SActionEvent;
-
-class IRenderer;
-class IRenderAuxGeom;
-struct SAuxGeomRenderFlags;
-
-class IMaterialManager;
-class IMaterial;
-class IXmlNode;
-class XmlNodeRef;
-class SInputShaderResources;
-struct CMaterialCGF;
-
-class IInventory;
-class IEntityClass;
-
-class IFireMode;
-
-template <typename t>
-t VIRTUAL(PVOID BASE, DWORD64 INDEX)
-{
-	return (*(t**)BASE)[INDEX];
-}
